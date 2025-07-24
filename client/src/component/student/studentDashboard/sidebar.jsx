@@ -126,8 +126,8 @@ const Sidebar = ({ activeView, setActiveView }) => {
   };
 
   const confirmLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("student");
+    localStorage.removeItem("studentToken");
+    localStorage.removeItem("studentData");
     toast.success("Logout successful!");
     setTimeout(() => {
       navigate("/", { replace: true });

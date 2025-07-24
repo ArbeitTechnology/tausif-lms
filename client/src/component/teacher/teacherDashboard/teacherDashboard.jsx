@@ -23,8 +23,8 @@ const TeacherDashboard = () => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-gray-100 to-gray-300 min-h-screen flex items-center justify-center">
-      <div className="flex w-full h-[100vh] bg-white overflow-hidden">
+    <div className="bg-gradient-to-br p-[20px] from-gray-100 to-gray-300  min-h-screen flex items-center justify-center">
+      <div className="flex w-full h-[94vh] rounded-[10px] bg-white overflow-hidden">
         {/* Sidebar Section */}
         <Sidebar
           activeView={activeView}

@@ -1,4 +1,3 @@
-// models/Course.js
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
@@ -10,8 +9,8 @@ const questionSchema = new Schema({
     enum: ['mcq-single', 'mcq-multiple', 'short-answer', 'broad-answer']
   },
   options: [String],
-  correctAnswer: Schema.Types.Mixed, // Can be number, array of numbers, or string
-  answer: String, // For short/broad answers
+  correctAnswer: Schema.Types.Mixed,
+  answer: String,
 });
 
 const contentItemSchema = new Schema({
@@ -22,12 +21,15 @@ const contentItemSchema = new Schema({
   },
   title: { type: String, required: true },
   description: String,
-  content: String, // For premium video content path
-  youtubeLink: String, // For free courses
-  thumbnail: String, // Path to thumbnail image
-  meetingLink: String, // For live classes
-  schedule: Date, // For live classes
-  questions: [questionSchema], // For quizzes
+  content: String,
+  youtubeLink: String,
+  thumbnail: { 
+    type: String,
+    default: null // Ensure it defaults to null if not provided
+  },
+  meetingLink: String,
+  schedule: Date,
+  questions: [questionSchema],
   isPremium: { type: Boolean, default: false }
 }, { timestamps: true });
 
@@ -44,6 +46,7 @@ const courseSchema = new Schema({
   instructor: { 
     type: Schema.Types.ObjectId, 
     ref: 'User', 
+    required: true
   },
   thumbnail: { 
     filename: String,
@@ -65,8 +68,10 @@ const courseSchema = new Schema({
     enum: ['active', 'inactive', 'draft'],
     default: 'draft'
   },
-  categories: [{ type: String }],
-  duration: Number, // in minutes
+  category:{
+    type:String,
+  },
+  duration: Number,
   studentsEnrolled: [{ 
     type: Schema.Types.ObjectId, 
     ref: 'User' 
@@ -84,15 +89,15 @@ const courseSchema = new Schema({
     enum: ['beginner', 'intermediate', 'advanced'],
     default: 'beginner'
   },
-    previousInstructors: [{
+  previousInstructors: [{
     instructor: { type: Schema.Types.ObjectId, ref: 'User' },
     changedAt: { type: Date, default: Date.now },
     changedBy: { type: Schema.Types.ObjectId, ref: 'User' }
   }],
-  createbyid:String
+  createbyid: { type: String, required: true }
 }, { timestamps: true });
 
-// Calculate average rating whenever a new rating is added
+// Calculate average rating
 courseSchema.methods.updateAverageRating = function() {
   if (this.ratings.length === 0) {
     this.averageRating = 0;
@@ -103,8 +108,16 @@ courseSchema.methods.updateAverageRating = function() {
   this.averageRating = sum / this.ratings.length;
 };
 
-// Pre-save hook to update average rating
+// Pre-save hooks
 courseSchema.pre('save', function(next) {
+  // Clean content items
+  this.content = this.content.map(item => {
+    if (item.thumbnail && typeof item.thumbnail === 'object') {
+      item.thumbnail = item.thumbnail.path || null;
+    }
+    return item;
+  });
+
   if (this.isModified('ratings')) {
     this.updateAverageRating();
   }

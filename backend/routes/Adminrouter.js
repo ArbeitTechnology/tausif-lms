@@ -14,6 +14,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const Admin = require("../models/Admin");
+const Category = require("../models/Category");
 // Example of a protected admin route
 
 // Configure storage for file uploads
@@ -1415,4 +1416,17 @@ Adminrouter.put(
   }
 );
 // ------------------------------------courses-routes-------------------------------------------------
+
+// ---------------------------all-category----------------------------
+Adminrouter.get("/all-category",  authenticateToken,authorizeAdmin,async(req,res)=>{
+  try {
+    const allcategory=await Category.find();
+    if(!allcategory){
+      return res.send({success:false,message:"Category did not find!"})
+    }
+    res.send({success:true,data:allcategory})
+  } catch (error) {
+    console.log(error)
+  }
+})
 module.exports = Adminrouter;

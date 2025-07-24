@@ -269,20 +269,17 @@ const fetchUserCourses = async () => {
                 transition={{ duration: 0.3 }}
                 whileHover={{ y: -5 }}
               >
+        
                 <div className="relative">
                   <img
-                    src={`${base_url}/uploads/courses/${course.thumbnail.filename}`}
+                    src={`${base_url}/${course.thumbnail}`}
                     alt={course.title}
                     className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      e.target.src = "/default-thumbnail.jpg";
-                    }}
                   />
                   <div className="absolute top-2 right-2 bg-black/80 text-white px-2 py-1 text-xs rounded-full">
                     {course.price === 0 ? "FREE" : `$${course.price}`}
                   </div>
                 </div>
-
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-lg font-bold text-gray-900 line-clamp-2">

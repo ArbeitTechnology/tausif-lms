@@ -18,9 +18,11 @@ const Notifications = ({ setNotificationCount }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  // Format date without date-fns
+  const [teacherToApprove, setTeacherToApprove] = useState(null);
+
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "short", day: "numeric" };
     return new Date(dateString).toLocaleDateString(undefined, options);
@@ -37,7 +39,7 @@ const Notifications = ({ setNotificationCount }) => {
         }
       );
 
-      setNotifications(data.notifications || []); // Ensure it's always an array
+      setNotifications(data.notifications || []);
     } catch (error) {
       toast.error(
         error.response?.data?.message || "Failed to load notifications",
@@ -49,13 +51,12 @@ const Notifications = ({ setNotificationCount }) => {
             boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
           },
           iconTheme: {
-            primary: "#ff0000", // bright red
-            secondary: "#ffffff", // white
+            primary: "#ff0000",
+            secondary: "#ffffff",
           },
         }
       );
     } finally {
-      // Always stop loading
       setIsLoading(false);
     }
   };
@@ -64,11 +65,13 @@ const Notifications = ({ setNotificationCount }) => {
     fetchNotifications();
   }, []);
 
-  const handleApproval = async (teacherId) => {
+  const handleApproval = async () => {
+    if (!teacherToApprove) return;
+
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.patch(
-        `http://localhost:3500/api/auth/teacher-status/${teacherId}`,
+        `http://localhost:3500/api/auth/teacher-status/${teacherToApprove.id}`,
         { status: "approved" },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -89,13 +92,13 @@ const Notifications = ({ setNotificationCount }) => {
           },
         });
 
-        // Optimistically update notifications instead of refetching
         setNotifications((prev) =>
-          prev.filter((teacher) => teacher.id !== teacherId)
+          prev.filter((teacher) => teacher.id !== teacherToApprove.id)
         );
 
-        // Update notification count
         setNotificationCount((prev) => (prev > 0 ? prev - 1 : 0));
+        setTeacherToApprove(null);
+        setIsApproveModalOpen(false);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Error approving teacher", {
@@ -106,8 +109,8 @@ const Notifications = ({ setNotificationCount }) => {
           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
         },
         iconTheme: {
-          primary: "#ff0000", // bright red
-          secondary: "#ffffff", // white
+          primary: "#ff0000",
+          secondary: "#ffffff",
         },
       });
     }
@@ -143,14 +146,13 @@ const Notifications = ({ setNotificationCount }) => {
           },
         });
 
-        // Remove the rejected teacher from notifications
         setNotifications((prev) =>
           prev.filter((teacher) => teacher.id !== selectedTeacher.id)
         );
 
         setRejectionReason("");
         setSelectedTeacher(null);
-        setIsModalOpen(false);
+        setIsRejectModalOpen(false);
         setNotificationCount((prev) => (prev > 0 ? prev - 1 : 0));
       }
     } catch (error) {
@@ -162,8 +164,8 @@ const Notifications = ({ setNotificationCount }) => {
           boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
         },
         iconTheme: {
-          primary: "#ff0000", // bright red
-          secondary: "#ffffff", // white
+          primary: "#ff0000",
+          secondary: "#ffffff",
         },
       });
     }
@@ -171,20 +173,29 @@ const Notifications = ({ setNotificationCount }) => {
 
   const viewTeacherDetails = (teacher) => {
     setSelectedTeacher(teacher);
-    setIsModalOpen(true);
+    setIsRejectModalOpen(true);
   };
+
+  const confirmApproval = (teacher) => {
+    setTeacherToApprove(teacher);
+    setIsApproveModalOpen(true);
+  };
+
   const toggleDropdown = () => {
     setIsDropdownOpen((prev) => !prev);
   };
+
   const downloadFile = (url) => {
     window.open(`http://localhost:3500/${url}`, "_blank");
   };
+
   const downloadCertificate = (certificateUrl) => {
     window.open(`http://localhost:3500/${certificateUrl}`, "_blank");
   };
+
   return (
     <div className="p-6">
-      <div className="p-2  mx-auto">
+      <div className="p-2 mx-auto">
         <h2 className="text-2xl font-semibold text-gray-800 pb-4 mb-8 border-b border-gray-200">
           Pending Teacher Approvals
         </h2>
@@ -295,18 +306,24 @@ const Notifications = ({ setNotificationCount }) => {
 
                     <div className="flex items-center space-x-2 ml-4">
                       <button
-                        onClick={() => handleApproval(teacher.id)}
-                        className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 rounded-full transition-colors"
+                        onClick={() => confirmApproval(teacher)}
+                        className="p-2 text-white bg-theme_color rounded-full transition-colors group relative"
                         title="Approve"
                       >
                         <FiCheckCircle size={20} />
+                        <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110">
+                          ✓
+                        </span>
                       </button>
                       <button
                         onClick={() => viewTeacherDetails(teacher)}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                        className="p-2 text-white bg-red-500 rounded-full transition-colors group relative"
                         title="Reject"
                       >
                         <FiXCircle size={20} />
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110">
+                          ✕
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -316,9 +333,9 @@ const Notifications = ({ setNotificationCount }) => {
           )}
 
           {/* Rejection Modal */}
-          {isModalOpen && selectedTeacher && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          {isRejectModalOpen && selectedTeacher && (
+            <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] bg-opacity-50 flex items-center justify-center p-4 z-[10000]">
+              <div className="bg-white rounded-lg p-6 w-full max-w-md animate-fade-in-up">
                 <h3 className="text-lg font-medium mb-4">
                   Reject {selectedTeacher.name}'s Application
                 </h3>
@@ -339,18 +356,56 @@ const Notifications = ({ setNotificationCount }) => {
                 <div className="flex justify-end space-x-3">
                   <button
                     onClick={() => {
-                      setIsModalOpen(false);
+                      setIsRejectModalOpen(false);
                       setRejectionReason("");
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleRejection}
-                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
                   >
                     Confirm Rejection
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Approval Confirmation Modal */}
+          {isApproveModalOpen && teacherToApprove && (
+            <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] bg-opacity-75 flex items-center justify-center p-4 z-[1000]">
+              <div className="bg-gray-900 rounded-xl p-6 w-full max-w-md animate-fade-in-up border border-gray-700 shadow-xl">
+                <div className="text-center">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                    <FiCheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-medium text-white mb-2">
+                    Approve {teacherToApprove.name}?
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-300">
+                      Are you sure you want to approve this teacher's application?
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-center space-x-4">
+                  <button
+                    onClick={() => {
+                      setIsApproveModalOpen(false);
+                      setTeacherToApprove(null);
+                    }}
+                    className="px-6 py-2 border border-gray-600 rounded-md text-gray-300 hover:bg-gray-800 transition-all duration-200 hover:border-gray-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleApproval}
+                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-md hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-lg hover:shadow-green-500/30"
+                  >
+                    Confirm Approval
                   </button>
                 </div>
               </div>

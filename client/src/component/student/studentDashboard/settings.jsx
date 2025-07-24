@@ -133,7 +133,7 @@ const StudentSettings = () => {
 
     try {
       setLoading({ ...loading, profile: true });
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("studentToken");
       
       // Format date back to DD/MM/YYYY if it's the date_of_birth field
       let valueToSend = tempProfile[field];
@@ -238,10 +238,10 @@ const StudentSettings = () => {
       setLoading({ ...loading, photo: true });
       const token = localStorage.getItem("studentToken");
       const formData = new FormData();
-      formData.append("profile_photo", file);
+      formData.append("file", file);
 
-      const response = await axios.put(
-        "http://localhost:3500/api/student/profile/photo",
+      const response = await axios.post(
+        "http://localhost:3500/api/auth/student/upload",
         formData,
         {
           headers: {
@@ -280,11 +280,12 @@ const StudentSettings = () => {
         <div className="p-6">
           {/* Profile Photo Section */}
           <div className="flex flex-col sm:flex-row items-center mb-8 gap-6">
+            <h1>sdfsdd{profile.profile_picture}</h1>
             <div className="relative">
               <div className="w-24 h-24 rounded-full bg-gray-100 overflow-hidden border-2 border-gray-300 flex items-center justify-center">
-                {profile.profile_photo ? (
+                {profile.profile_picture ? (
                   <img
-                    src={profile.profile_photo}
+                    src={profile.profile_picture}
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />

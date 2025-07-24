@@ -4,6 +4,7 @@
 
 @theme{
   --font-nunito:"Nunito", sans-serif;
+  --color-theme_color:#101828;
 }
 * {
   transition: all 0.2s ease;

@@ -13,6 +13,7 @@ import {
   FiSearch,
   FiClock,
   FiUsers,
+  FiEye,
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
@@ -167,9 +168,6 @@ const CourseList = ({ setActiveView }) => {
         // Update local state
         setEnrolledCourses([...enrolledCourses, courseId]);
         toast.success("Successfully enrolled in course!");
-        
-        // Optionally navigate to the course
-        // navigate(`/learn/${courseId}`);
       } else {
         toast.error(response.data.message || 'Enrollment failed');
       }
@@ -187,6 +185,11 @@ const CourseList = ({ setActiveView }) => {
 
   // Check if course is enrolled
   const isEnrolled = (courseId) => enrolledCourses.includes(courseId);
+
+  // View course overview
+  const viewOverview = (courseId) => {
+    navigate(`/course/${courseId}`);
+  };
 
   return (
     <div className="min-h-screen text-gray-900 p-0">
@@ -331,7 +334,14 @@ const CourseList = ({ setActiveView }) => {
                   </div>
                 </div>
 
-                <div className="p-3 sm:p-4 pt-0">
+                <div className="p-3 sm:p-4 pt-0 flex flex-col gap-2">
+                  <button
+                    onClick={() =>navigate(`/studnet/course-overview/${course.id}`)}
+                    className="w-full bg-gray-100 text-gray-800 py-1 sm:py-2 rounded-lg text-xs sm:text-sm hover:bg-gray-200 transition-all flex items-center justify-center"
+                  >
+                    <FiEye className="mr-1 sm:mr-2" /> Overview
+                  </button>
+                  
                   {isEnrolled(course.id) ? (
                     <button
                       onClick={() => navigate(`/learn/${course.id}`)}

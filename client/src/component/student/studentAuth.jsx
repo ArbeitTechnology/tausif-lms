@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FiMail, FiLock, FiUser, FiPhone, FiCalendar, FiMapPin, FiEye, FiEyeOff } from "react-icons/fi";
+import { FiMail, FiLock, FiUser, FiPhone, FiCalendar, FiMapPin, FiEye, FiEyeOff, FiUpload, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -22,6 +22,11 @@ const StudentAuth = () => {
     date_of_birth: "",
     address: ""
   });
+
+  // Profile picture state
+  const [profilePic, setProfilePic] = useState(null);
+  const [profilePicPreview, setProfilePicPreview] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
   // OTP verification state
   const [otp, setOtp] = useState("");
@@ -52,6 +57,34 @@ const StudentAuth = () => {
     }
     return () => clearTimeout(timer);
   }, [otpCountdown]);
+
+  // Handle profile picture upload
+  const handleProfilePicChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type and size
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      const maxSize = 2 * 1024 * 1024; // 2MB
+      
+      if (!validTypes.includes(file.type)) {
+        toast.error('Please upload a valid image (JPEG, PNG, GIF)');
+        return;
+      }
+      
+      if (file.size > maxSize) {
+        toast.error('Image size should be less than 2MB');
+        return;
+      }
+      
+      setProfilePic(file);
+      setProfilePicPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeProfilePic = () => {
+    setProfilePic(null);
+    setProfilePicPreview("");
+  };
 
   // ========== REGISTRATION FUNCTIONS ==========
   const validateField = (name, value) => {
@@ -109,8 +142,29 @@ const StudentAuth = () => {
     if (!validateForm()) return;
 
     setIsSubmitting(true);
+    setIsUploading(true);
+    
     try {
-      const response = await axios.post(`${base_url}/api/auth/student/register`, form);
+      // First upload the profile picture if it exists
+      let profilePicUrl = "";
+      if (profilePic) {
+        const formData = new FormData();
+        formData.append('file', profilePic);
+        
+        const uploadResponse = await axios.post(`${base_url}/api/auth/student/upload`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        
+        profilePicUrl = uploadResponse.data.url;
+      }
+
+      // Then register the student with all data including profile pic URL
+      const response = await axios.post(`${base_url}/api/auth/student/register`, {
+        ...form,
+        profile_pic: profilePicUrl
+      });
       
       setRegisteredEmail(form.email);
       setActiveTab("verify");
@@ -124,6 +178,7 @@ const StudentAuth = () => {
       }
     } finally {
       setIsSubmitting(false);
+      setIsUploading(false);
     }
   };
 
@@ -221,7 +276,6 @@ const StudentAuth = () => {
         localStorage.setItem("studentData", JSON.stringify(student));
       }
 
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       toast.success("Login successful");
       navigate("/student/dashboard");
     } catch (err) {
@@ -253,6 +307,46 @@ const StudentAuth = () => {
       </div>
 
       <form onSubmit={handleRegister}>
+        {/* Profile Picture Upload */}
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-2 border-gray-300">
+              {profilePicPreview ? (
+                <>
+                  <img 
+                    src={profilePicPreview} 
+                    alt="Profile preview" 
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeProfilePic}
+                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                  >
+                    <FiX size={14} />
+                  </button>
+                </>
+              ) : (
+                <FiUser className="text-gray-400 text-3xl" />
+              )}
+            </div>
+            <label
+              htmlFor="profilePic"
+              className="absolute -bottom-2 -right-2 bg-white border border-gray-300 rounded-full p-2 cursor-pointer hover:bg-gray-100"
+            >
+              <FiUpload className="text-gray-600" />
+              <input
+                id="profilePic"
+                name="profilePic"
+                type="file"
+                accept="image/*"
+                onChange={handleProfilePicChange}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Left Column */}
           <div className="space-y-6">
@@ -375,18 +469,18 @@ const StudentAuth = () => {
           <p className="text-sm text-gray-500 mb-4">* Mandatory fields</p>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploading}
             className={`w-full py-3 px-4 rounded-lg font-medium text-white ${
-              isSubmitting ? "bg-gray-600" : "bg-black hover:bg-gray-800"
+              isSubmitting || isUploading ? "bg-gray-600" : "bg-black hover:bg-gray-800"
             } transition-all shadow-md flex items-center justify-center`}
           >
-            {isSubmitting ? (
+            {isSubmitting || isUploading ? (
               <>
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Registering...
+                {isUploading ? "Uploading..." : "Registering..."}
               </>
             ) : (
               "Register"

@@ -157,8 +157,8 @@ const TeacherSettings = () => {
 
 
   return (
-    <div className="bg-gradient-to-br from-gray-100 font-nunito to-gray-300 min-h-screen flex items-center justify-center">
-      <div className="flex w-full h-[100vh] bg-white overflow-hidden">
+    <div className="bg-gray-50 p-[20px] flex items-center justify-center">
+      <div className="flex w-full h-[94vh] rounded-[10px] border-[1px] border-gray-200 shadow-xl bg-white  overflow-hidden">
         {/* Sidebar Section */}
         <Sidebar 
           activeView={activeView} 

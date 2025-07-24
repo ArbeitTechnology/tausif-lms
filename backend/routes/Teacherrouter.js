@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
 const Teacher = require("../models/Teacher");
+const Category = require("../models/Category");
 // Configure storage for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -538,8 +539,7 @@ Teaceherrouter.delete('/delete-question/:id', authenticateTeacher, async (req, r
 // Create a new course
 Teaceherrouter.post('/create-course', authenticateTeacher, uploadMultiple, async (req, res) => {
   try {
-    console.log(req.body)
-    // First handle the file uploads
+    // Validate required files
     if (!req.files || !req.files['thumbnail']) {
       return res.status(400).json({
         success: false,
@@ -557,49 +557,39 @@ Teaceherrouter.post('/create-course', authenticateTeacher, uploadMultiple, async
       requirements,
       whatYouWillLearn,
       level,
-      status
+      status,
+      user_id,
+      category
     } = req.body;
 
     // Validate required fields
-    if (!title || !description || !type) {
-      // Clean up uploaded files if validation fails
-      if (req.files) {
-        Object.values(req.files).forEach(fileArray => {
-          fileArray.forEach(file => {
-            if (fs.existsSync(file.path)) {
-              fs.unlinkSync(file.path);
-            }
-          });
-        });
-      }
+    if (!title || !description || !type || !user_id) {
+      cleanupFiles(req.files);
       return res.status(400).json({
         success: false,
-        message: 'Title, description, and type are required'
+        message: 'Title, description, type, and user ID are required'
       });
     }
 
-    // Parse the content array from JSON string
+    // Parse JSON content safely
     let contentItems = [];
     try {
-      contentItems = JSON.parse(content);
-    } catch (parseError) {
-      // Clean up uploaded files if parsing fails
-      if (req.files) {
-        Object.values(req.files).forEach(fileArray => {
-          fileArray.forEach(file => {
-            if (fs.existsSync(file.path)) {
-              fs.unlinkSync(file.path);
-            }
-          });
-        });
+      contentItems = typeof content === 'string' ? JSON.parse(content) : content;
+      
+      // Ensure contentItems is an array
+      if (!Array.isArray(contentItems)) {
+        throw new Error('Content must be an array');
       }
+    } catch (parseError) {
+      cleanupFiles(req.files);
       return res.status(400).json({
         success: false,
-        message: 'Invalid content format'
+        message: 'Invalid content format',
+        error: parseError.message
       });
     }
 
-    // Process the thumbnail
+    // Process thumbnail
     const thumbnailFile = req.files['thumbnail'][0];
     const thumbnail = {
       filename: thumbnailFile.filename,
@@ -608,7 +598,7 @@ Teaceherrouter.post('/create-course', authenticateTeacher, uploadMultiple, async
       mimetype: thumbnailFile.mimetype
     };
 
-    // Process attachments if any
+    // Process attachments
     const attachments = [];
     if (req.files['attachments']) {
       req.files['attachments'].forEach(file => {
@@ -625,40 +615,37 @@ Teaceherrouter.post('/create-course', authenticateTeacher, uploadMultiple, async
     const contentVideos = req.files['contentVideos'] || [];
     const contentThumbnails = req.files['contentThumbnails'] || [];
     
-    // Map content videos to their respective content items
     let videoIndex = 0;
     let thumbnailIndex = 0;
     
     const processedContent = contentItems.map(item => {
       const contentItem = { ...item };
       
+      // Clean thumbnail if it's an object
+      if (contentItem.thumbnail && typeof contentItem.thumbnail === 'object') {
+        contentItem.thumbnail = null;
+      }
+      
+      // Handle premium tutorial videos
       if (item.type === 'tutorial' && type === 'premium') {
         if (videoIndex < contentVideos.length) {
-          const videoFile = contentVideos[videoIndex];
-          contentItem.content = videoFile.path;
+          contentItem.content = contentVideos[videoIndex].path;
           videoIndex++;
         }
       }
       
+      // Handle thumbnails for live sessions
       if (item.type === 'live' && thumbnailIndex < contentThumbnails.length) {
-        const thumbnailFile = contentThumbnails[thumbnailIndex];
-        contentItem.thumbnail = thumbnailFile.path;
+        contentItem.thumbnail = contentThumbnails[thumbnailIndex].path;
         thumbnailIndex++;
       }
       
-      // For quizzes, ensure questions are properly formatted
-      if (item.type === 'quiz') {
-        contentItem.questions = item.questions.map(question => {
-          // Ensure correctAnswer is properly formatted
-          if (question.type === 'mcq-single') {
-            question.correctAnswer = parseInt(question.correctAnswer) || 0;
-          } else if (question.type === 'mcq-multiple') {
-            question.correctAnswer = Array.isArray(question.correctAnswer) 
-              ? question.correctAnswer.map(Number)
-              : [];
-          }
-          return question;
-        });
+      // Process quiz questions
+      if (item.type === 'quiz' && item.questions) {
+        contentItem.questions = item.questions.map(q => ({
+          ...q,
+          correctAnswer: formatCorrectAnswer(q.type, q.correctAnswer)
+        }));
       }
       
       return contentItem;
@@ -668,22 +655,21 @@ Teaceherrouter.post('/create-course', authenticateTeacher, uploadMultiple, async
     const newCourse = new Course({
       title,
       description,
-      instructor: req.body.user_id,
+      instructor: user_id,
       thumbnail,
       attachments,
       content: processedContent,
       price: type === 'premium' ? parseFloat(price) || 0 : 0,
       type,
       status: status || 'draft',
-      categories: JSON.parse(categories) || [],
-      requirements: JSON.parse(requirements) || [],
-      whatYouWillLearn: JSON.parse(whatYouWillLearn) || [],
+      categories: safeParseJSON(categories),
+      requirements: safeParseJSON(requirements),
+      whatYouWillLearn: safeParseJSON(whatYouWillLearn),
       level: level || 'beginner',
-      createbyid: req.body.user_id,
-      createbydtype: 'teacher'
+      createbyid: user_id,
+      category
     });
 
-    // Save the course to the database
     await newCourse.save();
 
     res.status(201).json({
@@ -693,18 +679,8 @@ Teaceherrouter.post('/create-course', authenticateTeacher, uploadMultiple, async
     });
   } catch (error) {
     console.error('Error creating course:', error);
+    cleanupFiles(req.files);
     
-    // Clean up uploaded files if there was an error
-    if (req.files) {
-      Object.values(req.files).forEach(fileArray => {
-        fileArray.forEach(file => {
-          if (fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
-        });
-      });
-    }
-
     res.status(500).json({
       success: false,
       message: 'Failed to create course',
@@ -712,6 +688,37 @@ Teaceherrouter.post('/create-course', authenticateTeacher, uploadMultiple, async
     });
   }
 });
+
+// Helper functions
+function cleanupFiles(files) {
+  if (files) {
+    Object.values(files).forEach(fileArray => {
+      fileArray.forEach(file => {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+      });
+    });
+  }
+}
+
+function safeParseJSON(input) {
+  try {
+    return typeof input === 'string' ? JSON.parse(input) : (Array.isArray(input) ? input : []);
+  } catch {
+    return [];
+  }
+}
+
+function formatCorrectAnswer(type, answer) {
+  if (type === 'mcq-single') {
+    return parseInt(answer) || 0;
+  }
+  if (type === 'mcq-multiple') {
+    return Array.isArray(answer) ? answer.map(Number) : [];
+  }
+  return answer;
+}
 
 // Get all courses
 Teaceherrouter.get('/all-courses', authenticateTeacher, async (req, res) => {
@@ -862,5 +869,17 @@ Teaceherrouter.delete('/delete-content/:courseId', authenticateTeacher, async (r
     res.status(400).send({ error: error.message });
   }
 });
+// ---------------------------all-category----------------------------
+Teaceherrouter.get("/all-category",authenticateTeacher,async(req,res)=>{
+  try {
+    const allcategory=await Category.find();
+    if(!allcategory){
+      return res.send({success:false,message:"Category did not find!"})
+    }
+    res.send({success:true,data:allcategory})
+  } catch (error) {
+    console.log(error)
+  }
+})
 
 module.exports=Teaceherrouter;

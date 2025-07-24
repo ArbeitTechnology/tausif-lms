@@ -28,7 +28,7 @@ Studentrouter.get('/profile/:id', studentAuth, async (req, res) => {
 });
 
 // Protected route - Update student profile (excluding password)
-Studentrouter.put('/profile/:id', studentAuth, async (req, res) => {
+Studentrouter.put('/profile/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { email, full_name, phone, date_of_birth, address } = req.body;
@@ -597,4 +597,18 @@ Studentrouter.put('/courses/:courseId/progress', studentAuth, async (req, res) =
     });
   }
 });
+
+// -----------------single-course----------------------------------
+Studentrouter.get("/course-overview/:id",async(req,res)=>{
+  try {
+    console.log(req.params.id)
+    const course=await Course.findById(req.params.id);
+    if(!course){
+          return res.send({success:false,message:"Course not found!"})
+    }
+    res.send({success:true,course:course})
+  } catch (error) {
+    console.log(error)
+  }
+})
 module.exports = Studentrouter;

@@ -426,9 +426,10 @@ const CourseList = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {course.title}
                           </div>
-                          <div className="text-sm text-gray-500 line-clamp-1">
-                            {course.description}
-                          </div>
+                     <div 
+  className="text-sm text-gray-500 line-clamp-1 overflow-hidden"
+  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }}
+/>
                         </div>
                       </div>
                     </td>

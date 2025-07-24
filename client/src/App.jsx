@@ -25,9 +25,11 @@ import CreateCourse from "./component/teacher/teacherDashboard/course/CreateCour
 import Notification from "./component/teacher/teacherDashboard/notification/Notification";
 import TeacherSettings from "./component/teacher/teacherDashboard/settings/TeacherSettings";
 import CourseLearningPage from "./component/student/studentDashboard/courses/CourseLearningPage";
+import CourseOverview from "./component/student/studentDashboard/courses/courseView/CourseOverview";
+import CoursePlayer from "./component/student/studentDashboard/courses/courseView/CoursePlayer";
 
 const isAuthenticated = () => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("studentToken");
   return !!token;
 };
 
@@ -125,8 +127,8 @@ const App = () => {
 
         {/* ------------------------------teacher-all-route---------------------------------------- */}
 
-        {/* ----------------------------------student-all-route---- */}
-        <Route path="/learn/:courseId" element={<CourseLearningPage />} />
+        {/* ----------------------------------student-all-route---------------------------------- */}
+        <Route path="/studnet/course-overview/:id" element={<CourseOverview />} />
       </Routes>
     </>
   );

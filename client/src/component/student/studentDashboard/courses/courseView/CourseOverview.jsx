@@ -12,320 +12,42 @@ import {
   FiDownload,
 } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
-// import axios from "axios";
+import axios from "axios";
 
 const CourseOverview = () => {
   const navigate = useNavigate();
-  const { courseId } = useParams();
+  const { id } = useParams();
   const [expanded, setExpanded] = useState(false);
   const [progress, setProgress] = useState({});
   const [hoveredItem, setHoveredItem] = useState(null);
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [certificate, setCertificate] = useState(null);
+  const base_url = import.meta.env.VITE_API_KEY_Base_URL;
 
-  // Fetch course data (commented API call for now)
+  // Fetch course data
   useEffect(() => {
     const fetchCourse = async () => {
       try {
         // API Call: Get Course Details
-        // const response = await axios.get(`/api/courses/${courseId}`);
-
-        // Dummy data for course details
-        const response = {
-          data: {
-            _id: "1",
-            title: "Advanced React Patterns",
-            subtitle: "Mastering React for real-world applications",
-            description: `This comprehensive course will take you from intermediate to advanced React development. You'll learn industry-proven patterns, performance optimization techniques, and state management solutions that power modern web applications.
-
-By the end of this course, you'll be able to:
-- Implement advanced React patterns like Compound Components and Render Props
-- Optimize performance with memoization and code splitting
-- Manage complex state with Context API and Redux
-- Build scalable and maintainable React applications`,
-            instructor: {
-              _id: "instructor1",
-              name: "Sarah Johnson",
-              avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-              bio: "Senior React Developer at TechCorp with 10+ years of experience building large-scale applications",
-            },
-            thumbnail: {
-              filename: "react-patterns.jpg",
-              path: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-              size: 1500,
-              mimetype: "image/jpeg",
-            },
-            attachments: [
-              {
-                _id: "att1",
-                filename: "Course-Slides.pdf",
-                path: "/attachments/course-slides",
-                size: 2500000,
-                mimetype: "application/pdf",
-              },
-              {
-                _id: "att2",
-                filename: "Starter-Code.zip",
-                path: "/attachments/starter-code",
-                size: 3500000,
-                mimetype: "application/zip",
-              },
-              {
-                _id: "att3",
-                filename: "Cheat-Sheet.pdf",
-                path: "/attachments/cheat-sheet",
-                size: 1200000,
-                mimetype: "application/pdf",
-              },
-            ],
-            content: [
-              {
-                _id: "tutorial1",
-                type: "tutorial",
-                title: "Introduction to Advanced Patterns",
-                description:
-                  "Overview of advanced React patterns and their use cases",
-                duration: 72,
-                isPremium: false,
-                youtubeLink: "https://www.youtube.com/watch?v=abc123",
-                locked: false,
-                thumbnail: "https://i.ytimg.com/vi/abc123/hqdefault.jpg",
-              },
-              {
-                _id: "tutorial2",
-                type: "tutorial",
-                title: "Compound Components",
-                description: "Learn how to build flexible component APIs",
-                duration: 85,
-                isPremium: true,
-                content: "/videos/compound-components.mp4",
-                locked: false,
-                thumbnail:
-                  "https://via.placeholder.com/800x450?text=Compound+Components",
-              },
-              {
-                _id: "tutorial3",
-                type: "tutorial",
-                title: "Render Props Pattern",
-                description:
-                  "Sharing code between components using render props",
-                duration: 68,
-                isPremium: false,
-                youtubeLink: "https://www.youtube.com/watch?v=def456",
-                locked: false,
-                thumbnail: "https://i.ytimg.com/vi/def456/hqdefault.jpg",
-              },
-              {
-                _id: "quiz1",
-                type: "quiz",
-                title: "Patterns Fundamentals Quiz",
-                description: "Test your understanding of React patterns",
-                duration: 15,
-                questions: [
-                  {
-                    _id: "q1",
-                    question: "What problem do Compound Components solve?",
-                    type: "mcq-single",
-                    options: [
-                      "State management",
-                      "Component communication",
-                      "Flexible component composition",
-                      "Performance optimization",
-                    ],
-                    correctAnswer: 2,
-                  },
-                  {
-                    _id: "q2",
-                    question:
-                      "Which patterns help with code reuse? (Select all that apply)",
-                    type: "mcq-multiple",
-                    options: [
-                      "Higher-Order Components",
-                      "Render Props",
-                      "Context API",
-                      "Compound Components",
-                    ],
-                    correctAnswer: [0, 1, 3],
-                  },
-                  {
-                    _id: "q3",
-                    question:
-                      "Explain the main benefit of the Render Props pattern in your own words",
-                    type: "short-answer",
-                    correctAnswer: "Sharing logic between components",
-                  },
-                ],
-                locked: false,
-              },
-              {
-                _id: "tutorial4",
-                type: "tutorial",
-                title: "Performance Optimization",
-                description: "Techniques to make your React apps blazing fast",
-                duration: 92,
-                isPremium: true,
-                content: "/videos/performance-optimization.mp4",
-                locked: true,
-                thumbnail:
-                  "https://via.placeholder.com/800x450?text=Performance",
-              },
-              {
-                _id: "tutorial5",
-                type: "tutorial",
-                title: "Context API Deep Dive",
-                description: "Mastering global state management with Context",
-                duration: 78,
-                isPremium: false,
-                youtubeLink: "https://www.youtube.com/watch?v=ghi789",
-                locked: true,
-                thumbnail: "https://i.ytimg.com/vi/ghi789/hqdefault.jpg",
-              },
-              {
-                _id: "live1",
-                type: "live",
-                title: "Q&A Session with Instructor",
-                description: "Get your questions answered live",
-                duration: 60,
-                meetingLink: "https://zoom.us/j/123456789",
-                schedule: "2023-08-15T18:00:00Z",
-                locked: false,
-                thumbnail:
-                  "https://via.placeholder.com/800x450?text=Live+Q%26A",
-              },
-              {
-                _id: "project1",
-                type: "project",
-                title: "Build a Pattern Library",
-                description:
-                  "Implement all learned patterns in a comprehensive project",
-                duration: 120,
-                locked: true,
-              },
-            ],
-            price: 99.99,
-            type: "premium",
-            level: "advanced",
-            createdAt: "2023-06-10T09:15:00Z",
-            updatedAt: "2023-07-20T14:30:00Z",
-            studentsEnrolled: ["user1", "user2", "user3", "user4", "user5"],
-            averageRating: 4.7,
-            ratings: [
-              {
-                user: "user1",
-                rating: 5,
-                review: "Excellent content and explanations!",
-                date: "2023-07-01T10:30:00Z",
-              },
-              {
-                user: "user2",
-                rating: 4,
-                review:
-                  "Very comprehensive but some sections could use more examples",
-                date: "2023-07-05T15:45:00Z",
-              },
-              {
-                user: "user3",
-                rating: 5,
-                review:
-                  "Best React course I've taken. The patterns explained here saved our project!",
-                date: "2023-07-12T08:20:00Z",
-              },
-            ],
-            requirements: [
-              "Solid understanding of React fundamentals",
-              "JavaScript ES6+ knowledge",
-              "Basic experience with hooks",
-              "Node.js and npm installed",
-            ],
-            whatYouWillLearn: [
-              "Compound Components pattern",
-              "Render Props technique",
-              "Performance optimization strategies",
-              "Advanced Context API usage",
-              "Custom hook patterns",
-              "State management solutions",
-              "Component composition techniques",
-            ],
-            categories: ["Web Development", "React", "Frontend"],
-            duration: 420, // 7 hours
-            status: "active",
-            languages: ["English"],
-            captions: true,
-            certificate: {
-              included: true,
-              template: "professional-blue",
-            },
-          },
-        };
-
-        setCourse(response.data);
-
-        // Dummy progress data
-        // Enhanced progress data
-        const progressResponse = {
-          data: {
-            progress: {
-              tutorial1: {
-                completed: true,
-                progress: 100,
-                lastAccessed: "2023-07-15T14:30:00Z",
-                notes: "Great introduction to patterns",
-              },
-              tutorial2: {
-                completed: true,
-                progress: 100,
-                lastAccessed: "2023-07-16T09:15:00Z",
-                notes: "Need to review compound components again",
-              },
-              tutorial3: {
-                completed: false,
-                progress: 65,
-                lastAccessed: "2023-07-17T16:45:00Z",
-              },
-              quiz1: {
-                completed: true,
-                progress: 100,
-                score: 85,
-                lastAccessed: "2023-07-18T11:20:00Z",
-              },
-              tutorial4: {
-                completed: false,
-                progress: 0,
-                locked: true,
-              },
-              tutorial5: {
-                completed: false,
-                progress: 0,
-                locked: true,
-              },
-              live1: {
-                completed: false,
-                progress: 0,
-                registered: true,
-              },
-              project1: {
-                completed: false,
-                progress: 0,
-                locked: true,
-              },
-            },
-            overallProgress: 42,
-            lastAccessed: "2023-07-18T11:20:00Z",
-            streak: 4,
-            completed: false,
-            certificateEligible: false,
-          },
-        };
-
-        setProgress(progressResponse.data.progress);
-
-        // If course is completed, set the certificate (dummy data)
-        if (progressResponse.data.progress.quiz1.completed) {
-          setCertificate({
-            downloadUrl: "https://via.placeholder.com/150?text=Certificate",
-          });
+        const response = await axios.get(`${base_url}/api/student/course-overview/${id}`);
+        
+        if (!response.data.success) {
+          throw new Error(response.data.message || "Course not found");
         }
+
+        const courseData = response.data.course;
+        setCourse(courseData);
+
+        // Initialize progress for each content item
+        const initialProgress = {};
+        courseData.content.forEach(item => {
+          initialProgress[item._id] = {
+            completed: false,
+            progress: 0
+          };
+        });
+        setProgress(initialProgress);
 
         setLoading(false);
       } catch (error) {
@@ -335,28 +57,28 @@ By the end of this course, you'll be able to:
     };
 
     fetchCourse();
-  }, [courseId]);
+  }, [id]);
 
   const toggleDescription = () => {
     setExpanded(!expanded);
   };
 
   const startCourse = () => {
-    navigate(`/course/${courseId}`);
+    navigate(`/course/${id}`);
   };
 
   const toggleComplete = async (itemId) => {
     try {
       // Determine the new completion state
       const newCompletedState = !progress[itemId]?.completed;
-      // Update progress API call (commented)
-      // await axios.post(`/api/users/current/courses/${courseId}/progress`, { contentId: itemId, completed: newCompletedState });
-      // Correct state update with prev state (React’s functional state update)
+      
+      // Update progress state
       setProgress((prevState) => ({
         ...prevState,
         [itemId]: {
           ...prevState[itemId],
           completed: newCompletedState,
+          progress: newCompletedState ? 100 : 0
         },
       }));
 
@@ -367,13 +89,9 @@ By the end of this course, you'll be able to:
         );
 
         if (allCompleted) {
-          // Simulate a certificate generation response
-          const certResponse = {
-            data: {
-              downloadUrl: "https://via.placeholder.com/150?text=Certificate",
-            },
-          };
-          setCertificate(certResponse.data);
+          setCertificate({
+            downloadUrl: "#", // Replace with actual certificate URL
+          });
         }
       }
     } catch (error) {
@@ -384,6 +102,8 @@ By the end of this course, you'll be able to:
   const calculateOverallProgress = () => {
     if (!course) return 0;
     const totalItems = course.content.length;
+    if (totalItems === 0) return 0;
+    
     const completedItems = Object.values(progress).filter(
       (item) => item?.completed
     ).length;
@@ -391,24 +111,33 @@ By the end of this course, you'll be able to:
   };
 
   const downloadCertificate = async () => {
-    // try {
-    //   // Dummy download function
-    //   const response = await axios.get(
-    //     `/api/courses/${courseId}/certificate/download`,
-    //     {
-    //       responseType: "blob",
-    //     }
-    //   );
-    //   const url = window.URL.createObjectURL(new Blob([response.data]));
-    //   const link = document.createElement("a");
-    //   link.href = url;
-    //   link.setAttribute("download", `Certificate-${course.title}.pdf`);
-    //   document.body.appendChild(link);
-    //   link.click();
-    //   link.remove();
-    // } catch (error) {
-    //   console.error("Error downloading certificate:", error);
-    // }
+    try {
+      // Simulate certificate download
+      console.log("Downloading certificate...");
+      // In a real app, you would make an API call here
+      // const response = await axios.get(`/api/courses/${id}/certificate`, { responseType: 'blob' });
+      // Then create a download link
+    } catch (error) {
+      console.error("Error downloading certificate:", error);
+    }
+  };
+
+  const downloadAttachment = async (attachmentId) => {
+    try {
+      // Simulate attachment download
+      console.log(`Downloading attachment ${attachmentId}...`);
+      // In a real app, you would make an API call here
+    } catch (error) {
+      console.error("Error downloading attachment:", error);
+    }
+  };
+
+  const getContentDuration = (contentItem) => {
+    if (contentItem.type === "quiz") {
+      return `${contentItem.questions?.length || 0} questions`;
+    }
+    // For other types, you might want to add duration fields to your content items
+    return "10 min"; // Default duration
   };
 
   const overallProgress = calculateOverallProgress();
@@ -438,6 +167,7 @@ By the end of this course, you'll be able to:
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Hero Section */}
@@ -451,31 +181,24 @@ By the end of this course, you'll be able to:
                   {course.level}
                 </span>
                 <span className="ml-4 text-gray-300">
-                  {Math.floor(course.duration / 60)}h {course.duration % 60}m •{" "}
-                  {course.content.length} lessons
+                  {course.content.length} lessons • {course.type} course
                 </span>
               </div>
               <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center lg:text-left">
                 {course.title}
               </h1>
               <h2 className="text-xl md:text-2xl text-gray-300 mb-6">
-                {course.subtitle ||
-                  course.description.substring(0, 100) + "..."}
+                {course.description.substring(0, 100) + "..."}
               </h2>
 
               <div className="flex flex-wrap gap-4 mb-8">
                 <div className="flex items-center">
-                  <img
-                    src={
-                      course.instructor.avatar ||
-                      "https://randomuser.me/api/portraits/men/32.jpg"
-                    }
-                    alt={course.instructor.name}
-                    className="w-10 h-10 rounded-full mr-3"
-                  />
+                  <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3">
+                    <span className="text-lg">I</span>
+                  </div>
                   <div>
                     <p className="text-sm text-gray-300">Instructor</p>
-                    <p className="font-medium">{course.instructor.name}</p>
+                    <p className="font-medium">Instructor Name</p>
                   </div>
                 </div>
                 <div className="bg-white/10 px-4 py-2 rounded-lg">
@@ -524,7 +247,7 @@ By the end of this course, you'll be able to:
               <div className="relative group">
                 <img
                   src={
-                    course.thumbnail?.path ||
+                   `${base_url}/uploads/courses/${course.thumbnail?.filename}` ||
                     "https://via.placeholder.com/800x450?text=Course+Thumbnail"
                   }
                   alt={course.title}
@@ -568,9 +291,10 @@ By the end of this course, you'll be able to:
                     expanded ? "max-h-full" : "max-h-32"
                   }`}
                 >
-                  <p className="whitespace-pre-line text-gray-700 leading-relaxed">
-                    {course.description}
-                  </p>
+                  <div 
+                    className="whitespace-pre-line text-gray-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: course.description }}
+                  />
                 </div>
                 <button
                   onClick={toggleDescription}
@@ -612,25 +336,6 @@ By the end of this course, you'll be able to:
                 </button>
               </div>
 
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold mb-4">
-                  What you'll learn
-                </h3>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {course.whatYouWillLearn.map((item, index) => (
-                    <li
-                      key={index}
-                      className="flex items-start bg-gray-50 p-4 rounded-lg"
-                    >
-                      <span className="text-indigo-600 mr-3 mt-0.5">
-                        <FiCheck />
-                      </span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
               {course.requirements && course.requirements.length > 0 && (
                 <div className="mb-8">
                   <h3 className="text-xl font-semibold mb-4">Requirements</h3>
@@ -661,21 +366,14 @@ By the end of this course, you'll be able to:
 
               <div className="space-y-2">
                 {course.content.map((item, index) => {
-                  const duration =
-                    item.type === "tutorial" || item.type === "live"
-                      ? `${Math.floor(item.duration / 60)}:${(
-                          item.duration % 60
-                        )
-                          .toString()
-                          .padStart(2, "0")}`
-                      : `${item.questions?.length || 0} questions`;
+                  const duration = getContentDuration(item);
 
                   return (
                     <motion.div
                       key={item._id || index}
                       whileHover={{ scale: 1.01 }}
                       className={`border rounded-lg overflow-hidden ${
-                        item.locked
+                        item.isPremium
                           ? "border-gray-200"
                           : "border-gray-300 hover:border-indigo-400"
                       } ${
@@ -692,7 +390,7 @@ By the end of this course, you'll be able to:
                             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
                               <FiCheck className="text-indigo-600 text-lg" />
                             </div>
-                          ) : item.locked ? (
+                          ) : item.isPremium ? (
                             <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                               <FiLock className="text-gray-400 text-lg" />
                             </div>
@@ -716,7 +414,7 @@ By the end of this course, you'll be able to:
                           <div className="flex justify-between items-center">
                             <h3
                               className={`font-medium ${
-                                item.locked ? "text-gray-500" : "text-gray-900"
+                                item.isPremium ? "text-gray-500" : "text-gray-900"
                               }`}
                             >
                               {item.title}
@@ -750,7 +448,7 @@ By the end of this course, you'll be able to:
                         </div>
 
                         <div className="ml-4 flex items-center">
-                          {!item.locked && hoveredItem === item._id && (
+                          {!item.isPremium && hoveredItem === item._id && (
                             <button
                               onClick={() => toggleComplete(item._id)}
                               className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -762,11 +460,11 @@ By the end of this course, you'll be able to:
                               <FiCheck />
                             </button>
                           )}
-                          {!item.locked && (
+                          {!item.isPremium && (
                             <button
                               onClick={() =>
                                 navigate(
-                                  `/course/${courseId}?lesson=${item._id}`
+                                  `/course/${id}?lesson=${item._id}`
                                 )
                               }
                               className="ml-2 w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700"
@@ -878,13 +576,12 @@ By the end of this course, you'll be able to:
                             </p>
                           </div>
                         </div>
-                        <a
-                          href={`/api/courses/${courseId}/attachments/${file._id}`}
+                        <button
+                          onClick={() => downloadAttachment(file._id)}
                           className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-                          download
                         >
                           Download
-                        </a>
+                        </button>
                       </div>
                     ))}
                   </div>

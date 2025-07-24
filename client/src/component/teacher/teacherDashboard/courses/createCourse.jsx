@@ -28,6 +28,7 @@ const CourseCreator = () => {
     attachments: [],
     content: [],
     price: "",
+        category: "", // Added category field
   });
   const [expandedSections, setExpandedSections] = useState({});
 
@@ -366,7 +367,36 @@ const CourseCreator = () => {
       }),
     }));
   };
+  // Fetch categories when component mounts
+  const [categories, setCategories] = useState([]); // Added categories state
+  const [loadingCategories, setLoadingCategories] = useState(false); // Added loading state
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoadingCategories(true);
+        const response = await axios.get(`${base_url}/teacher/all-category`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (response.data.success) {
+          setCategories(response.data.data);
+        } else {
+          toast.error("Failed to fetch categories");
+        }
+      } catch (error) {
+        toast.error("Error fetching categories");
+        console.error("Category fetch error:", error);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    if (courseType) {
+      fetchCategories();
+    }
+  }, [courseType, base_url]);
   const publishCourse = async () => {
     try {
       // Validate required fields
@@ -595,6 +625,32 @@ const CourseCreator = () => {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">
                 Course Information
               </h2>
+                {/* Add this new category field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category *
+                  </label>
+                  {loadingCategories ? (
+                    <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 animate-pulse">
+                      Loading categories...
+                    </div>
+                  ) : (
+                    <select
+                      name="category"
+                      value={courseData.category}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 hover:border-gray-500"
+                      required
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map((category) => (
+                        <option key={category._id} value={category._id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -117,8 +117,8 @@ const Notification = () => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="flex w-full h-screen bg-white overflow-hidden">
+    <div className="bg-gray-50  p-[20px]">
+      <div className="flex w-full h-[94vh] rounded-[10px] shadow-xl bg-white overflow-hidden">
         {/* Sidebar Section */}
         <Sidebar 
           activeView={activeView} 

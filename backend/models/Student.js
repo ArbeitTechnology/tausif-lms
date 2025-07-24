@@ -39,7 +39,6 @@ const studentSchema = new mongoose.Schema(
     },
     profile_picture: {
       type: String,
-      default: "default_profile.jpg"
     },
     isVerified: {
       type: Boolean,
@@ -52,28 +51,22 @@ const studentSchema = new mongoose.Schema(
     },
     otp: {
       type: String,
-      select: false
     },
     otpExpires: {
       type: Date,
-      select: false
     },
     resetPasswordToken: {
       type: String,
-      select: false
     },
     resetPasswordExpire: {
       type: Date,
-      select: false
     },
     loginAttempts: {
       type: Number,
       default: 0,
-      select: false
     },
     lockUntil: {
       type: Date,
-      select: false
     },
     enrolledCourses: [
       {

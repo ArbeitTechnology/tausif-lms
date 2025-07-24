@@ -8,6 +8,7 @@ import Sidebar from "../sidebar";
 import Theader from "../common/Theader";
 import axios from "axios";
 import { MdDelete } from "react-icons/md";
+import DOMPurify from 'dompurify';
 const CourseList = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
@@ -171,8 +172,8 @@ const handleDeleteConfirm = async () => {
 
 
   return (
-    <div className="bg-gradient-to-br from-gray-100 to-gray-300 min-h-screen flex items-center justify-center">
-      <div className="flex w-full h-[100vh] bg-white overflow-hidden">
+    <div className="bg-gradient-to-br from-gray-100 p-[20px] to-gray-300 min-h-screen flex items-center justify-center">
+      <div className="flex w-full h-[94vh] bg-white overflow-hidden">
         {/* Sidebar Section */}
         <Sidebar
           activeView={activeView}
@@ -266,9 +267,10 @@ const handleDeleteConfirm = async () => {
                                   <div className="text-sm font-medium text-gray-900">
                                     {course.title}
                                   </div>
-                                  <div className="text-sm text-gray-500 line-clamp-1">
-                                    {course.description}
-                                  </div>
+                               <div 
+  className="text-sm text-gray-500 line-clamp-1 overflow-hidden"
+  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(course.description) }}
+/>
                                 </div>
                               </div>
                             </td>

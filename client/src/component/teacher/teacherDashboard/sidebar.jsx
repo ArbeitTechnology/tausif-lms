@@ -138,7 +138,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                       transition-all duration-200 ease-in-out hover:scale-[1.01] active:scale-[0.99]
                       ${
                         expandedMenus[item.name]
-                          ? "bg-blue-600 text-white"
+                          ? "bg-theme_color text-white"
                           : "text-gray-600 hover:bg-gray-50"
                       }
                     `}
@@ -178,10 +178,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                             onClick={() => navigate(child.path)}
                             className={`
                               flex items-center cursor-pointer text-xs md:text-sm py-2.5 px-3 w-full text-left 
-                              rounded-md transition-all duration-150 ease-in-out font-[600] text-gray-700 hover:text-blue-600 hover:translate-x-1
+                              rounded-md transition-all duration-150 ease-in-out font-[600] text-gray-700 hover:text-theme_color hover:translate-x-1
                               ${
                                 location.pathname === child.path
-                                  ? "text-blue-500"
+                                  ? "text-theme_color"
                                   : ""
                               }
                             `}
@@ -202,7 +202,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
                     transition-all duration-200 ease-in-out cursor-pointer hover:scale-[1.01] active:scale-[0.99]
                     ${
                       location.pathname === item.path
-                        ? "bg-blue-600 text-white"
+                        ? "bg-theme_color text-white"
                         : "text-gray-600 hover:bg-gray-50"
                     }
                   `}

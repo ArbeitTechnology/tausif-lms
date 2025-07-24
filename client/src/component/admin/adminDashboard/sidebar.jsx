@@ -41,7 +41,40 @@ const Sidebar = ({
       fetchAdminProfile(admin_info._id, token);
     }
   }, []);
+    const [notifications, setNotifications] = useState([]);
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(
+        "http://localhost:3500/api/auth/notifications",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
+      setNotifications(data.notifications || []); // Ensure it's always an array
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to load notifications",
+        {
+          style: {
+            background: "#fff",
+            color: "#000",
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+          },
+          iconTheme: {
+            primary: "#ff0000", // bright red
+            secondary: "#ffffff", // white
+          },
+        }
+      );
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
   const baseNavItems = [
     { name: "dashboard", icon: <FiHome />, component: "dashboard" },
 
@@ -71,24 +104,33 @@ const Sidebar = ({
         { name: "Course List", component: "courseList" },
       ],
     },
-    {
-      name: "notifications",
-      icon: (
-        <div className="relative">
-          <FiBell />
-          {notificationCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white"
-            >
-              {notificationCount}
-            </motion.span>
-          )}
-        </div>
-      ),
-      component: "notifications",
-    },
+{
+  name: "notifications",
+  icon: (
+    <div className="relative">
+      <FiBell />
+      {notifications.length > 0 && (
+        <motion.span
+          initial={{ scale: 0 }}
+          animate={{ 
+            scale: [1, 1.2, 1], // Scale pulse
+            rotate: [0, -10, 10, -5, 5, 0], // Shaking/vibrating effect
+          }}
+          transition={{
+            duration: 0.6,
+            repeat: Infinity,
+            repeatDelay: 3,
+            ease: "easeInOut"
+          }}
+          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-bold"
+        >
+          {notifications.length > 9 ? "9+" : notifications.length}
+        </motion.span>
+      )}
+    </div>
+  ),
+  component: "notifications",
+},
     { name: "settings", icon: <FiSettings />, component: "settings" },
   ];
 
