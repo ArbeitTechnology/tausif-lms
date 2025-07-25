@@ -901,7 +901,7 @@ const CreateCourse = () => {
                     >
                       <option value="">Select a category</option>
                       {categories.map((category) => (
-                        <option key={category._id} value={category._id}>
+                        <option key={category._id} value={category.name}>
                           {category.name}
                         </option>
                       ))}
@@ -1001,21 +1001,21 @@ const CreateCourse = () => {
                                             <div className="flex gap-3">
                                                 <button
                                                     onClick={() => addTutorial(courseType === "premium")}
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+                                                    className="bg-theme_color text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                                                 >
                                                     <FiPlus className="mr-2" />
                                                     Add Tutorial
                                                 </button>
                                                 <button
                                                     onClick={addQuiz}
-                                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+                                                    className="bg-theme_color text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                                                 >
                                                     <FiPlus className="mr-2" />
                                                     Add Quiz
                                                 </button>
                                                 <button
                                                     onClick={addLiveClass}
-                                                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+                                                    className="bg-theme_color text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                                                 >
                                                     <FiPlus className="mr-2" />
                                                     Add Live Class
@@ -1608,7 +1608,7 @@ const CreateCourse = () => {
                                     <div className="flex justify-end">
                                         <button
                                             onClick={publishCourse}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-lg font-medium transition-colors shadow-md"
+                                            className="bg-theme_color text-white px-6 py-3 rounded-lg text-lg font-medium transition-colors shadow-md"
                                         >
                                             Publish Course
                                         </button>

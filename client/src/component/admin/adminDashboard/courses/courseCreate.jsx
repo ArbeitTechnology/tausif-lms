@@ -6,7 +6,6 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import toast, { Toaster } from "react-hot-toast";
 import axios from "axios";
-import Sidebar from "../sidebar";
 
 const courseCreate = () => {
     const base_url = import.meta.env.VITE_API_KEY_Base_URL;
@@ -58,9 +57,9 @@ const courseCreate = () => {
     const fetchCategories = async () => {
       try {
         setLoadingCategories(true);
-        const response = await axios.get(`${base_url}/api/admin/all-category`, {
+        const response = await axios.get(`${base_url}/api/teacher/all-category`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("teacherToken")}`,
           },
         });
         if (response.data.success) {
@@ -566,7 +565,7 @@ const courseCreate = () => {
             }
 
             // Prepare form data for upload
-            const admindata = JSON.parse(localStorage.getItem("admin"))
+            const teacherdata = JSON.parse(localStorage.getItem("teacherData"))
             const formData = new FormData();
             formData.append("title", courseData.title);
             formData.append("description", courseData.description);
@@ -579,7 +578,7 @@ const courseCreate = () => {
             formData.append("whatYouWillLearn", JSON.stringify(courseData.whatYouWillLearn));
             formData.append("level", courseData.level);
             formData.append("status", "draft");
-            formData.append("user_id", admindata._id);
+            formData.append("user_id", teacherdata._id);
              formData.append("category", courseData.category); // Added category
             // Add attachments
             courseData.attachments.forEach((file) => {
@@ -640,12 +639,14 @@ const courseCreate = () => {
     };
 
     return (
-        <div className="bg-gray-50 min-h-screen">
-            <div className="flex w-full h-[100vh] bg-white overflow-hidden">
-            
+        <div className="bg-gray-50 p-[20px]">
+            <div className="flex w-full h-[94vh] bg-white overflow-hidden">
+                {/* Sidebar Section */}
+           
+
                 {/* Main Content Section */}
                 <div className="flex-1 h-full overflow-auto">
-                  
+              
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -890,7 +891,7 @@ const courseCreate = () => {
                     >
                       <option value="">Select a category</option>
                       {categories.map((category) => (
-                        <option key={category._id} value={category._id}>
+                        <option key={category._id} value={category.name}>
                           {category.name}
                         </option>
                       ))}
@@ -990,21 +991,21 @@ const courseCreate = () => {
                                             <div className="flex gap-3">
                                                 <button
                                                     onClick={() => addTutorial(courseType === "premium")}
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+                                                    className="bg-theme_color text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                                                 >
                                                     <FiPlus className="mr-2" />
                                                     Add Tutorial
                                                 </button>
                                                 <button
                                                     onClick={addQuiz}
-                                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+                                                    className="bg-theme_color text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                                                 >
                                                     <FiPlus className="mr-2" />
                                                     Add Quiz
                                                 </button>
                                                 <button
                                                     onClick={addLiveClass}
-                                                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+                                                    className="bg-theme_color text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                                                 >
                                                     <FiPlus className="mr-2" />
                                                     Add Live Class
@@ -1597,7 +1598,7 @@ const courseCreate = () => {
                                     <div className="flex justify-end">
                                         <button
                                             onClick={publishCourse}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-lg font-medium transition-colors shadow-md"
+                                            className="bg-theme_color text-white px-6 py-3 rounded-lg text-lg font-medium transition-colors shadow-md"
                                         >
                                             Publish Course
                                         </button>

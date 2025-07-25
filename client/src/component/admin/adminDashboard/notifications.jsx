@@ -307,7 +307,7 @@ const Notifications = ({ setNotificationCount }) => {
                     <div className="flex items-center space-x-2 ml-4">
                       <button
                         onClick={() => confirmApproval(teacher)}
-                        className="p-2 text-white bg-theme_color rounded-full transition-colors group relative"
+                        className="p-2 text-white bg-theme_color cursor-pointer rounded-[5px] transition-colors group relative"
                         title="Approve"
                       >
                         <FiCheckCircle size={20} />
@@ -317,7 +317,7 @@ const Notifications = ({ setNotificationCount }) => {
                       </button>
                       <button
                         onClick={() => viewTeacherDetails(teacher)}
-                        className="p-2 text-white bg-red-500 rounded-full transition-colors group relative"
+                        className="p-2 text-white bg-red-500 rounded-[5px] cursor-pointer  transition-colors group relative"
                         title="Reject"
                       >
                         <FiXCircle size={20} />

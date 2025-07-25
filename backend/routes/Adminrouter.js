@@ -747,7 +747,6 @@ Adminrouter.delete(
 
 // -------------------------------------courses-routes----------------------------------------
 
-// Create a new course
 Adminrouter.post(
   "/courses",
   [
@@ -771,6 +770,7 @@ Adminrouter.post(
         level = "beginner",
         user_id,
         categories,
+        category
       } = req.body;
 
       // Validate required fields
@@ -797,12 +797,8 @@ Adminrouter.post(
       }
 
       const thumbnailFile = req.files.thumbnail[0];
-      const thumbnailData = {
-        filename: thumbnailFile.originalname,
-        path: thumbnailFile.filename,
-        size: thumbnailFile.size,
-        mimetype: thumbnailFile.mimetype,
-      };
+      // Store just the path as string if schema expects string
+      const thumbnailPath = thumbnailFile.path; 
 
       // Handle content files
       const contentItems = JSON.parse(content).map((item) => {
@@ -812,12 +808,8 @@ Adminrouter.post(
             (f) => f.originalname === item.content?.name
           );
           if (videoFile) {
-            item.content = {
-              filename: videoFile.originalname,
-              path: videoFile.path,
-              size: videoFile.size,
-              mimetype: videoFile.mimetype,
-            };
+            // Store just the path if schema expects string
+            item.content = videoFile.path;
           }
         }
 
@@ -827,12 +819,11 @@ Adminrouter.post(
             (f) => f.originalname === item.thumbnail?.name
           );
           if (thumbFile) {
-            item.thumbnail = {
-              filename: thumbFile.originalname,
-              path: thumbFile.path,
-              size: thumbFile.size,
-              mimetype: thumbFile.mimetype,
-            };
+            // Store just the path if schema expects string
+            item.thumbnail = thumbFile.path;
+          } else {
+            // Ensure thumbnail is not an empty object
+            item.thumbnail = item.thumbnail?.path || null;
           }
         }
 
@@ -840,17 +831,11 @@ Adminrouter.post(
       });
 
       // Handle attachments
-      const attachments =
-        req.files.attachments?.map((file) => ({
-          filename: file.originalname,
-          path: file.path,
-          size: file.size,
-          mimetype: file.mimetype,
-        })) || [];
+      const attachments = req.files.attachments?.map((file) => file.path) || [];
+
       let categoryList = [];
       if (categories) {
         try {
-          // if you did formData.append("categories", JSON.stringify([...]))
           categoryList = JSON.parse(categories);
         } catch (_) {
           return res.status(400).json({
@@ -859,23 +844,23 @@ Adminrouter.post(
           });
         }
       }
+
       // Create the course
       const newCourse = new Course({
         title,
         description,
-        instructor: req.user_id,
-        thumbnail: thumbnailData,
+        thumbnail: thumbnailPath, // Store as string path
         type,
         price: type === "premium" ? parseFloat(price) : 0,
         content: contentItems,
         attachments,
         level,
         status: "draft",
-        // Add default empty arrays for optional fields
-        categories: [],
+        category,
         categories: categoryList,
         requirements: [],
         whatYouWillLearn: [],
+        createbyid: user_id
       });
 
       await newCourse.save();
@@ -886,10 +871,11 @@ Adminrouter.post(
         data: newCourse,
       });
     } catch (error) {
-      console.error(error);
+      console.error("Detailed error:", error);
       res.status(500).json({
         success: false,
         message: "Server error while creating course",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }

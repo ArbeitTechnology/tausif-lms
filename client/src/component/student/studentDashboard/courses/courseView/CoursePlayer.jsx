@@ -19,10 +19,11 @@ import {
   FiSettings,
 } from "react-icons/fi";
 import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 
 const CoursePlayer = () => {
   const navigate = useNavigate();
-  const { courseId } = useParams();
+  const { id } = useParams();
   const [currentContent, setCurrentContent] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -38,127 +39,53 @@ const CoursePlayer = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [showPiP, setShowPiP] = useState(false);
   const [showBroadQuestions, setShowBroadQuestions] = useState(false);
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [certificateUrl, setCertificateUrl] = useState(null);
   const videoRef = useRef(null);
   const videoContainerRef = useRef(null);
+  const base_url = import.meta.env.VITE_API_KEY_Base_URL;
 
-  // Dummy course data matching the overview page
-  const course = {
-    _id: "1",
-    title: "Advanced React Patterns",
-    subtitle: "Mastering React for real-world applications",
-    content: [
-      {
-        _id: "tutorial1",
-        type: "tutorial",
-        title: "Introduction to Advanced Patterns",
-        description: "Overview of advanced React patterns and their use cases",
-        duration: 72,
-        isPremium: false,
-        youtubeLink: "https://www.youtube.com/embed/5xlVP04905w",
-        locked: false,
-        thumbnail: "https://i.ytimg.com/vi/abc123/hqdefault.jpg",
-      },
-      {
-        _id: "tutorial2",
-        type: "tutorial",
-        title: "Compound Components",
-        description: "Learn how to build flexible component APIs",
-        duration: 85,
-        isPremium: true,
-        youtubeLink: "https://www.youtube.com/embed/F3JuuYuOUK4",
-        locked: false,
-        thumbnail:
-          "https://via.placeholder.com/800x450?text=Compound+Components",
-      },
-      {
-        _id: "tutorial3",
-        type: "tutorial",
-        title: "Render Props Pattern",
-        description: "Sharing code between components using render props",
-        duration: 68,
-        isPremium: false,
-        youtubeLink: "https://www.youtube.com/embed/5F-6v_8G0Ac",
-        locked: false,
-        thumbnail: "https://i.ytimg.com/vi/def456/hqdefault.jpg",
-      },
-      {
-        _id: "quiz1",
-        type: "quiz",
-        title: "Patterns Fundamentals Quiz",
-        description: "Test your understanding of React patterns",
-        duration: 15,
-        questions: [
-          {
-            _id: "q1",
-            question: "What problem do Compound Components solve?",
-            type: "mcq-single",
-            options: [
-              "State management",
-              "Component communication",
-              "Flexible component composition",
-              "Performance optimization",
-            ],
-            correctAnswer: 2,
-          },
-          {
-            _id: "q2",
-            question:
-              "Which patterns help with code reuse? (Select all that apply)",
-            type: "mcq-multiple",
-            options: [
-              "Higher-Order Components",
-              "Render Props",
-              "Context API",
-              "Compound Components",
-            ],
-            correctAnswer: [0, 1, 3],
-          },
-          {
-            _id: "q3",
-            question:
-              "Explain the main benefit of the Render Props pattern in your own words",
-            type: "short-answer",
-            correctAnswer: "Sharing logic between components",
-          },
-        ],
-        locked: false,
-      },
-      {
-        _id: "tutorial4",
-        type: "tutorial",
-        title: "Performance Optimization",
-        description: "Techniques to make your React apps blazing fast",
-        duration: 92,
-        isPremium: true,
-        youtubeLink: "https://www.youtube.com/embed/5xlVP04905w",
-        locked: false,
-        thumbnail: "https://via.placeholder.com/800x450?text=Performance",
-      },
-    ],
-  };
-
-  // Initialize progress
+  // Fetch course data
   useEffect(() => {
-    const initialProgress = {};
-    course.content.forEach((item) => {
-      initialProgress[item._id] = {
-        completed: false,
-        progress: 0,
-      };
-    });
-    setProgress(initialProgress);
-  }, []);
+    const fetchCourse = async () => {
+      try {
+        const response = await axios.get(`${base_url}/api/student/single-courses/${id}`);
+        setCourse(response.data.data);
+        
+        // Initialize progress
+        const initialProgress = {};
+        response.data.data.content.forEach((item) => {
+          initialProgress[item._id] = {
+            completed: false,
+            progress: 0,
+          };
+        });
+        setProgress(initialProgress);
+      } catch (err) {
+        console.error("Error fetching course:", err);
+        setError("Failed to load course data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourse();
+  }, [id, base_url]);
 
   useEffect(() => {
+    if (!course) return;
+
     // Check if current content is a quiz and show quiz modal
-    if (course.content[currentContent].type === "quiz") {
+    if (course.content[currentContent]?.type === "quiz") {
       setShowQuiz(true);
       setIsPlaying(false);
     } else {
       setShowQuiz(false);
       setIsPlaying(true);
     }
-  }, [currentContent]);
+  }, [currentContent, course]);
 
   useEffect(() => {
     // Update playback rate when changed
@@ -191,6 +118,8 @@ const CoursePlayer = () => {
   }, []);
 
   const handleNext = () => {
+    if (!course) return;
+    
     if (currentContent < course.content.length - 1) {
       setCurrentContent(currentContent + 1);
       // Update progress
@@ -231,50 +160,70 @@ const CoursePlayer = () => {
     }));
   };
 
-  const submitQuiz = () => {
-    // Calculate score
-    let score = 0;
-    const quiz = course.content[currentContent];
+  const submitQuiz = async () => {
+    if (!course) return;
+    
+    try {
+      // Calculate score
+      let score = 0;
+      const quiz = course.content[currentContent];
+      const detailedAnswers = [];
 
-    quiz.questions.forEach((question) => {
-      if (question.type === "mcq-single") {
-        if (quizAnswers[question._id] === question.correctAnswer) {
-          score++;
+      quiz.questions.forEach((question) => {
+        const userAnswer = quizAnswers[question._id];
+        let isCorrect = false;
+
+        if (question.type === "mcq-single") {
+          isCorrect = userAnswer === question.correctAnswer;
+        } else if (question.type === "mcq-multiple") {
+          const userAnswers = Array.isArray(userAnswer) ? userAnswer : [];
+          const correctAnswers = question.correctAnswer;
+          isCorrect = userAnswers.length === correctAnswers.length && 
+                     userAnswers.every(val => correctAnswers.includes(val));
+        } else if (question.type === "short-answer" || question.type === "broad-answer") {
+          isCorrect = userAnswer && 
+                     typeof userAnswer === 'string' && 
+                     userAnswer.toLowerCase().includes(question.answer.toLowerCase());
         }
-      } else if (question.type === "mcq-multiple") {
-        const userAnswers = quizAnswers[question._id] || [];
-        const correctAnswers = question.correctAnswer;
 
-        if (
-          userAnswers.length === correctAnswers.length &&
-          userAnswers.every((val) => correctAnswers.includes(val))
-        ) {
-          score++;
-        }
-      } else if (question.type === "short-answer") {
-        // Simple check for demo purposes
-        if (
-          quizAnswers[question._id]
-            ?.toLowerCase()
-            .includes(question.correctAnswer.toLowerCase())
-        ) {
-          score++;
-        }
-      }
-    });
+        if (isCorrect) score++;
+        
+        detailedAnswers.push({
+          questionId: question._id,
+          answer: userAnswer,
+          isCorrect
+        });
+      });
 
-    setQuizScore(score);
-    setQuizSubmitted(true);
+      const percentageScore = Math.round((score / quiz.questions.length) * 100);
+      const passed = percentageScore >= 70;
 
-    // Update progress
-    setProgress((prev) => ({
-      ...prev,
-      [quiz._id]: {
-        ...prev[quiz._id],
-        completed: true,
-        progress: 100,
-      },
-    }));
+      // Submit quiz to backend
+      const response = await axios.post(`${base_url}/api/student/submit-quiz`, {
+        courseId: course._id,
+        contentItemId: quiz._id,
+        answers: quizAnswers,
+        studentId: localStorage.getItem('userId') // Assuming you store user ID in localStorage
+      });
+
+      setQuizScore(percentageScore);
+      setQuizSubmitted(true);
+      setCertificateUrl(response.data.certificateUrl || null);
+
+      // Update progress
+      setProgress((prev) => ({
+        ...prev,
+        [quiz._id]: {
+          ...prev[quiz._id],
+          completed: true,
+          progress: 100,
+        },
+      }));
+
+    } catch (error) {
+      console.error("Error submitting quiz:", error);
+      setError("Failed to submit quiz");
+    }
   };
 
   const closeQuiz = () => {
@@ -282,13 +231,15 @@ const CoursePlayer = () => {
     setQuizAnswers({});
     setQuizSubmitted(false);
     setQuizScore(null);
-    if (currentContent < course.content.length - 1) {
+    if (course && currentContent < course.content.length - 1) {
       setCurrentContent(currentContent + 1);
     }
     setIsPlaying(true);
   };
 
   const calculateOverallProgress = () => {
+    if (!course) return 0;
+    
     const totalItems = course.content.length;
     const completedItems = Object.values(progress).filter(
       (item) => item?.completed
@@ -296,14 +247,12 @@ const CoursePlayer = () => {
     return Math.round((completedItems / totalItems) * 100);
   };
 
-  const currentItem = course.content[currentContent];
-  const overallProgress = calculateOverallProgress();
-
   const formatDuration = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
   const handleVideoClick = () => {
     setIsPlaying(!isPlaying);
   };
@@ -316,13 +265,77 @@ const CoursePlayer = () => {
 
   // Add this useEffect for time updates
   useEffect(() => {
+    if (!course) return;
+    
+    const currentItem = course.content[currentContent];
+    if (!currentItem || currentItem.type === "quiz") return;
+    
     const interval = setInterval(() => {
-      if (isPlaying && currentTime < currentItem.duration) {
+      if (isPlaying && currentTime < (currentItem.duration || 0)) {
         setCurrentTime((prev) => prev + 1);
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [isPlaying, currentTime, currentItem]);
+  }, [isPlaying, currentTime, currentContent, course]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading course content...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center p-6 bg-white rounded-lg shadow-md max-w-md">
+          <div className="text-red-500 mb-4">
+            <FiX size={48} className="mx-auto" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Error Loading Course</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">No course data available</p>
+        </div>
+      </div>
+    );
+  }
+
+  const currentItem = course.content[currentContent];
+  const overallProgress = calculateOverallProgress();
+
+  // Extract YouTube video ID from URL
+  const getYouTubeEmbedUrl = (url) => {
+    if (!url) return "";
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    const videoId = (match && match[2].length === 11) ? match[2] : null;
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
+  };
+
+  const downloadCertificate = () => {
+    if (certificateUrl) {
+      window.open(`${base_url}${certificateUrl}`, '_blank');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
@@ -330,7 +343,7 @@ const CoursePlayer = () => {
       <header className="bg-white shadow-sm">
         <div className="max-w-full mx-auto px-6 py-4 flex justify-between items-center">
           <button
-            onClick={() => navigate(`/course/${courseId}`)}
+            onClick={() => navigate(`/course/${id}`)}
             className="flex items-center text-indigo-600 hover:text-indigo-800 font-medium"
           >
             <FiChevronLeft className="mr-1" /> Back to course
@@ -338,7 +351,7 @@ const CoursePlayer = () => {
           <div className="flex items-center space-x-4">
             <div className="hidden md:block">
               <h1 className="text-xl font-bold">{course.title}</h1>
-              <p className="text-sm text-gray-600">{course.subtitle}</p>
+              <p className="text-sm text-gray-600">{course.description.replace(/<[^>]+>/g, '')}</p>
             </div>
             <div className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium">
               {overallProgress}% Complete
@@ -359,7 +372,7 @@ const CoursePlayer = () => {
               <div className="w-full max-h-full max-w-full aspect-video bg-black relative">
                 <iframe
                   ref={videoRef}
-                  src={`${currentItem.youtubeLink}?autoplay=${
+                  src={`${getYouTubeEmbedUrl(currentItem.youtubeLink)}?autoplay=${
                     isPlaying ? 1 : 0
                   }&mute=${isMuted ? 1 : 0}&controls=0&modestbranding=1&rel=0`}
                   frameBorder="0"
@@ -376,7 +389,7 @@ const CoursePlayer = () => {
                       {currentItem.title}
                     </h2>
                     <p className="text-gray-300 mb-4">
-                      {currentItem.description}
+                      {currentItem.description.replace(/<[^>]+>/g, '')}
                     </p>
 
                     {/* Progress bar */}
@@ -385,7 +398,7 @@ const CoursePlayer = () => {
                         className="bg-indigo-500 h-1 rounded-full"
                         style={{
                           width: `${
-                            (currentTime / currentItem.duration) * 100
+                            (currentTime / (currentItem.duration || 1)) * 100
                           }%`,
                         }}
                       ></div>
@@ -415,7 +428,7 @@ const CoursePlayer = () => {
                         </button>
                         <div className="text-white text-sm bg-black/30 px-3 py-1 rounded-full">
                           {formatTime(currentTime)} /{" "}
-                          {formatDuration(currentItem.duration)}
+                          {currentItem.duration ? formatDuration(currentItem.duration) : "0:00"}
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
@@ -440,8 +453,6 @@ const CoursePlayer = () => {
                             Speed: {playbackRate}x
                           </button>
                         </div>
-
-                        {/* PiP Button */}
 
                         <button
                           onClick={toggleFullscreen}
@@ -571,12 +582,12 @@ const CoursePlayer = () => {
                         <span className="text-xs text-gray-500 flex items-center">
                           <FiClock className="mr-1" />
                           {item.type === "quiz"
-                            ? `${item.questions.length} questions`
-                            : formatDuration(item.duration)}
+                            ? `${item.questions?.length || 0} questions`
+                            : item.duration ? formatDuration(item.duration) : "0:00"}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">
-                        {item.description}
+                        {item.description.replace(/<[^>]+>/g, '')}
                       </p>
                       {item.type === "quiz" && (
                         <span className="inline-block mt-2 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
@@ -603,7 +614,10 @@ const CoursePlayer = () => {
                     </p>
                   </div>
                 </div>
-                <button className="mt-4 w-full bg-white text-indigo-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+                <button 
+                  onClick={downloadCertificate}
+                  className="mt-4 w-full bg-white text-indigo-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                >
                   Download Certificate
                 </button>
               </div>
@@ -614,7 +628,7 @@ const CoursePlayer = () => {
 
       {/* Quiz Modal */}
       <AnimatePresence>
-        {showQuiz && currentItem.type === "quiz" && (
+        {showQuiz && currentItem?.type === "quiz" && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -631,7 +645,7 @@ const CoursePlayer = () => {
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <h2 className="text-2xl font-bold">{currentItem.title}</h2>
-                    <p className="text-gray-600">{currentItem.description}</p>
+                    <p className="text-gray-600">{currentItem.description.replace(/<[^>]+>/g, '')}</p>
                   </div>
                   <button
                     onClick={closeQuiz}
@@ -643,7 +657,7 @@ const CoursePlayer = () => {
 
                 {!quizSubmitted ? (
                   <div className="space-y-8">
-                    {currentItem.questions.map((question, qIndex) => (
+                    {currentItem.questions?.map((question, qIndex) => (
                       <div key={question._id} className="mb-6">
                         <div className="flex items-start mb-4">
                           <div className="bg-indigo-100 text-indigo-800 w-8 h-8 rounded-full flex items-center justify-center font-medium mr-3 flex-shrink-0">
@@ -656,7 +670,7 @@ const CoursePlayer = () => {
 
                         {question.type === "mcq-single" && (
                           <div className="space-y-3 ml-11">
-                            {question.options.map((option, oIndex) => (
+                            {question.options?.map((option, oIndex) => (
                               <label
                                 key={oIndex}
                                 className={`flex items-center space-x-3 p-4 border rounded-xl cursor-pointer transition-colors ${
@@ -682,7 +696,7 @@ const CoursePlayer = () => {
 
                         {question.type === "mcq-multiple" && (
                           <div className="space-y-3 ml-11">
-                            {question.options.map((option, oIndex) => (
+                            {question.options?.map((option, oIndex) => (
                               <label
                                 key={oIndex}
                                 className={`flex items-center space-x-3 p-4 border rounded-xl cursor-pointer transition-colors ${
@@ -734,6 +748,20 @@ const CoursePlayer = () => {
                             />
                           </div>
                         )}
+
+                        {question.type === "broad-answer" && (
+                          <div className="ml-11">
+                            <textarea
+                              value={quizAnswers[question._id] || ""}
+                              onChange={(e) =>
+                                handleAnswerChange(question._id, e.target.value)
+                              }
+                              className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                              rows={6}
+                              placeholder="Type your detailed answer here..."
+                            />
+                          </div>
+                        )}
                       </div>
                     ))}
 
@@ -752,12 +780,12 @@ const CoursePlayer = () => {
                       <FiCheck className="text-green-600 text-4xl" />
                     </div>
                     <div className="text-4xl font-bold mb-2">
-                      {quizScore}/{currentItem.questions.length}
+                      {quizScore}/{currentItem.questions?.length || 0}
                     </div>
                     <p className="text-xl mb-6">
-                      {quizScore === currentItem.questions.length
+                      {quizScore === (currentItem.questions?.length || 0)
                         ? "Perfect score! You're amazing!"
-                        : quizScore >= currentItem.questions.length / 2
+                        : quizScore >= (currentItem.questions?.length || 0) / 2
                         ? "Well done! You passed the quiz."
                         : "Keep practicing! Review the material and try again."}
                     </p>
@@ -767,14 +795,14 @@ const CoursePlayer = () => {
                           className="bg-indigo-600 h-2.5 rounded-full"
                           style={{
                             width: `${
-                              (quizScore / currentItem.questions.length) * 100
+                              (quizScore / (currentItem.questions?.length || 1)) * 100
                             }%`,
                           }}
                         ></div>
                       </div>
                       <div className="text-sm text-gray-600 mt-2">
                         {Math.round(
-                          (quizScore / currentItem.questions.length) * 100
+                          (quizScore / (currentItem.questions?.length || 1)) * 100
                         )}
                         % correct
                       </div>

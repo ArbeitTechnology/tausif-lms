@@ -27,6 +27,7 @@ import TeacherSettings from "./component/teacher/teacherDashboard/settings/Teach
 import CourseLearningPage from "./component/student/studentDashboard/courses/CourseLearningPage";
 import CourseOverview from "./component/student/studentDashboard/courses/courseView/CourseOverview";
 import CoursePlayer from "./component/student/studentDashboard/courses/courseView/CoursePlayer";
+import Editcourse from "./component/admin/adminDashboard/courses/Editcourse";
 
 const isAuthenticated = () => {
   const token = localStorage.getItem("studentToken");
@@ -112,7 +113,7 @@ const App = () => {
             )
           }
         />
-
+       <Route path="/admin/courses/edit/:id" element={<Editcourse />} />
         {/* ------------------------------teacher-all-route---------------------------------------- */}
         <Route path="/teacher/courses/create" element={<CreateCourse />} />
         <Route path="/teacher/course-list" element={<CourseList />} />
@@ -129,6 +130,8 @@ const App = () => {
 
         {/* ----------------------------------student-all-route---------------------------------- */}
         <Route path="/studnet/course-overview/:id" element={<CourseOverview />} />
+        <Route path="/student/learn/:id" element={<CoursePlayer />} />
+
       </Routes>
     </>
   );

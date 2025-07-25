@@ -18,7 +18,7 @@ import {
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useNavigate, useLocation } from "react-router-dom";
-
+import { MdGolfCourse } from "react-icons/md";
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const [teacherData, setTeacherData] = useState({
     name: "Loading...",
@@ -43,6 +43,38 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       children: [
         {
           name: "Create Course",
+          icon: <FiEdit size={16} />,
+          path: "/teacher/courses/create",
+        },
+        {
+          name: "Course List",
+          icon: <FiList size={16} />,
+          path: "/teacher/course-list",
+        },
+      ],
+    },
+        {
+      name: "Student Answere",
+      icon: <FiBook size={18} />,
+      children: [
+        {
+          name: "Create ",
+          icon: <FiEdit size={16} />,
+          path: "/teacher/courses/create",
+        },
+        {
+          name: "Course List",
+          icon: <FiList size={16} />,
+          path: "/teacher/course-list",
+        },
+      ],
+    },
+     {
+      name: "Courses paper",
+      icon: <MdGolfCourse size={18} />,
+      children: [
+        {
+          name: "Course Paper ",
           icon: <FiEdit size={16} />,
           path: "/teacher/courses/create",
         },

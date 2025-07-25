@@ -331,7 +331,7 @@ const fetchUserCourses = async () => {
                       Enrolled: {course.enrolledAt}
                     </div>
                     <button
-                      onClick={() => navigate(`/learn/${course.id}`)}
+                      onClick={() => navigate(`/student/learn/${course.id}`)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium ${
                         course.progress === 100
                           ? "bg-green-100 text-green-700 hover:bg-green-200"

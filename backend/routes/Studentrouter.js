@@ -4,7 +4,7 @@ const studentAuth = require('../middleware/studentMiddleware');
 const Student = require('../models/Student');
 const bcrypt = require('bcryptjs');
 const Course = require('../models/Course');
-
+const mongoose=require("mongoose")
 // Protected route - Get student profile
 Studentrouter.get('/profile/:id', studentAuth, async (req, res) => {
   try {
@@ -340,7 +340,17 @@ Studentrouter.get('/courses/:courseId/content/:contentId/quiz', studentAuth, asy
     });
   }
 });
-
+Studentrouter.get("/single-courses/:id",async(req,res)=>{
+  try {
+    const course=await Course.findById({_id:req.params.id});
+    if(!course){
+       return res.send({success:false,message:"COurse did not find."})
+    }
+    res.send({success:true,data:course})
+  } catch (error) {
+    console.log(error)
+  }
+})
 // Submit quiz answers and calculate score
 Studentrouter.post('/courses/:courseId/content/:contentId/submit-quiz', studentAuth, async (req, res) => {
   try {
@@ -611,4 +621,368 @@ Studentrouter.get("/course-overview/:id",async(req,res)=>{
     console.log(error)
   }
 })
+
+
+const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
+const PDFDocument = require('pdfkit');
+const moment = require('moment');
+
+// Submit quiz and track progress
+Studentrouter.post('/submit-quiz', async (req, res) => {
+  const { courseId, contentItemId, answers, studentId } = req.body;
+
+  try {
+    // Validate inputs
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.json({ success: false, message: 'Invalid course ID' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(contentItemId)) {
+      return res.json({ success: false, message: 'Invalid content item ID' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.json({ success: false, message: 'Invalid student ID' });
+    }
+
+    // Find the course and the specific quiz content
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    const quizContent = course.content.id(contentItemId);
+    if (!quizContent || quizContent.type !== 'quiz') {
+      return res.status(400).json({ success: false, message: 'Content item is not a quiz' });
+    }
+
+    // Calculate quiz score
+    let score = 0;
+    const detailedAnswers = [];
+
+    quizContent.questions.forEach(question => {
+      const userAnswer = answers[question._id];
+      let isCorrect = false;
+
+      if (question.type === 'mcq-single') {
+        isCorrect = userAnswer === question.correctAnswer;
+      } else if (question.type === 'mcq-multiple') {
+        const userAnswers = Array.isArray(userAnswer) ? userAnswer : [];
+        const correctAnswers = question.correctAnswer;
+        isCorrect = userAnswers.length === correctAnswers.length && 
+                   userAnswers.every(val => correctAnswers.includes(val));
+      } else if (question.type === 'short-answer' || question.type === 'broad-answer') {
+        // For text answers, we consider it correct if it contains the correct answer text
+        isCorrect = userAnswer && 
+                   typeof userAnswer === 'string' && 
+                   userAnswer.toLowerCase().includes(question.answer.toLowerCase());
+      }
+
+      if (isCorrect) score++;
+      
+      detailedAnswers.push({
+        questionId: question._id,
+        answer: userAnswer,
+        isCorrect
+      });
+    });
+
+    const percentageScore = Math.round((score / quizContent.questions.length) * 100);
+    const passed = percentageScore >= 70; // Assuming passing score is 70%
+
+    // Update student's progress
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    // Record quiz attempt
+    await student.recordQuizAttempt(
+      courseId, 
+      contentItemId, 
+      detailedAnswers, 
+      percentageScore, 
+      passed
+    );
+
+    // Check if course is completed and generate certificate if needed
+    let certificateUrl = null;
+    const enrollment = student.enrolledCourses.find(
+      e => e.course.toString() === courseId.toString()
+    );
+
+    if (enrollment.completed) {
+      certificateUrl = await generateCertificate(student, course);
+      
+      // Add certificate to student's record if generated
+      if (certificateUrl) {
+        enrollment.certificates.push({
+          url: certificateUrl,
+          issuedAt: new Date(),
+          expiresAt: moment().add(2, 'years').toDate() // Certificate expires in 2 years
+        });
+        await student.save();
+      }
+    }
+
+    res.status(200).json({ 
+      success: true, 
+      score: percentageScore,
+      passed,
+      totalQuestions: quizContent.questions.length,
+      correctAnswers: score,
+      certificateUrl: certificateUrl || null
+    });
+
+  } catch (error) {
+    console.error('Error submitting quiz:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to submit quiz',
+      error: error.message 
+    });
+  }
+});
+
+// Generate certificate PDF
+async function generateCertificate(student, course) {
+  try {
+    // Create certificates directory if it doesn't exist
+    const certDir = path.join(__dirname, '../public/certificates');
+    if (!fs.existsSync(certDir)) {
+      fs.mkdirSync(certDir, { recursive: true });
+    }
+
+    const certId = uuidv4();
+    const fileName = `certificate_${course._id}_${student._id}_${certId}.pdf`;
+    const filePath = path.join(certDir, fileName);
+    const publicUrl = `/certificates/${fileName}`;
+
+    // Create PDF document
+    const doc = new PDFDocument({
+      layout: 'landscape',
+      size: 'A4',
+      margin: 0
+    });
+
+    // Pipe the PDF to a file
+    const stream = fs.createWriteStream(filePath);
+    doc.pipe(stream);
+
+    // Add background
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill('#f8f9fa');
+
+    // Add decorative elements
+    doc.fill('#343a40')
+       .fontSize(60)
+       .text('Certificate of Completion', {
+         align: 'center',
+         valign: 'center',
+         lineGap: 10,
+         width: doc.page.width,
+         height: doc.page.height * 0.15
+       });
+
+    // Add main content
+    doc.fill('#212529')
+       .fontSize(24)
+       .text('This is to certify that', {
+         align: 'center',
+         valign: 'center',
+         lineGap: 10,
+         width: doc.page.width,
+         height: doc.page.height * 0.1
+       });
+
+    doc.fill('#0d6efd')
+       .fontSize(36)
+       .font('Helvetica-Bold')
+       .text(student.full_name, {
+         align: 'center',
+         valign: 'center',
+         lineGap: 10,
+         width: doc.page.width,
+         height: doc.page.height * 0.15
+       });
+
+    doc.fill('#212529')
+       .fontSize(20)
+       .text('has successfully completed the course', {
+         align: 'center',
+         valign: 'center',
+         lineGap: 10,
+         width: doc.page.width,
+         height: doc.page.height * 0.1
+       });
+
+    doc.fill('#0d6efd')
+       .fontSize(28)
+       .font('Helvetica-Bold')
+       .text(course.title, {
+         align: 'center',
+         valign: 'center',
+         lineGap: 10,
+         width: doc.page.width,
+         height: doc.page.height * 0.1
+       });
+
+    // Add completion date
+    const completionDate = moment().format('MMMM Do, YYYY');
+    doc.fill('#495057')
+       .fontSize(16)
+       .text(`Completed on ${completionDate}`, {
+         align: 'center',
+         valign: 'center',
+         lineGap: 10,
+         width: doc.page.width,
+         height: doc.page.height * 0.1
+       });
+
+    // Add certificate ID
+    doc.fill('#6c757d')
+       .fontSize(12)
+       .text(`Certificate ID: ${certId}`, {
+         align: 'center',
+         valign: 'center',
+         lineGap: 10,
+         width: doc.page.width,
+         height: doc.page.height * 0.05
+       });
+
+    // Finalize PDF
+    doc.end();
+
+    // Wait for the stream to finish writing
+    await new Promise((resolve, reject) => {
+      stream.on('finish', resolve);
+      stream.on('error', reject);
+    });
+
+    return publicUrl;
+
+  } catch (error) {
+    console.error('Error generating certificate:', error);
+    return null;
+  }
+}
+
+// Get student's quiz attempts for a course
+Studentrouter.get('/quiz-attempts/:studentId/:courseId', async (req, res) => {
+  try {
+    const { studentId, courseId } = req.params;
+
+    // Validate inputs
+    if (!mongoose.Types.ObjectId.isValid(studentId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ success: false, message: 'Invalid IDs provided' });
+    }
+
+    const student = await Student.findById(studentId)
+      .select('enrolledCourses')
+      .populate({
+        path: 'enrolledCourses.course',
+        select: 'title'
+      });
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const enrollment = student.enrolledCourses.find(
+      e => e.course._id.toString() === courseId.toString()
+    );
+
+    if (!enrollment) {
+      return res.status(404).json({ success: false, message: 'Enrollment not found' });
+    }
+
+    // Get course content to map quiz titles
+    const course = await Course.findById(courseId)
+      .select('content');
+
+    const quizAttemptsWithDetails = enrollment.quizAttempts.map(attempt => {
+      const contentItem = course.content.id(attempt.contentItemId);
+      return {
+        ...attempt.toObject(),
+        quizTitle: contentItem?.title || 'Unknown Quiz',
+        quizDescription: contentItem?.description || ''
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      quizAttempts: quizAttemptsWithDetails,
+      courseTitle: enrollment.course.title
+    });
+
+  } catch (error) {
+    console.error('Error fetching quiz attempts:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch quiz attempts',
+      error: error.message 
+    });
+  }
+});
+
+// Get student's certificate for a course
+Studentrouter.get('/certificate/:studentId/:courseId', async (req, res) => {
+  try {
+    const { studentId, courseId } = req.params;
+
+    // Validate inputs
+    if (!mongoose.Types.ObjectId.isValid(studentId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ success: false, message: 'Invalid IDs provided' });
+    }
+
+    const student = await Student.findById(studentId)
+      .select('enrolledCourses full_name');
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const enrollment = student.enrolledCourses.find(
+      e => e.course.toString() === courseId.toString()
+    );
+
+    if (!enrollment) {
+      return res.status(404).json({ success: false, message: 'Enrollment not found' });
+    }
+
+    if (!enrollment.completed) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Course not completed yet' 
+      });
+    }
+
+    if (enrollment.certificates.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Certificate not found' 
+      });
+    }
+
+    // Get the most recent certificate
+    const latestCertificate = enrollment.certificates.reduce((latest, cert) => {
+      return (!latest || new Date(cert.issuedAt) > new Date(latest.issuedAt)) ? cert : latest;
+    });
+
+    res.status(200).json({
+      success: true,
+      certificateUrl: latestCertificate.url,
+      issuedAt: latestCertificate.issuedAt,
+      expiresAt: latestCertificate.expiresAt,
+      studentName: student.full_name
+    });
+
+  } catch (error) {
+    console.error('Error fetching certificate:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch certificate',
+      error: error.message 
+    });
+  }
+});
 module.exports = Studentrouter;

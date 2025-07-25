@@ -17,7 +17,7 @@ const contentItemSchema = new Schema({
   type: { 
     type: String, 
     required: true,
-    enum: ['tutorial', 'quiz', 'live']
+    enum: ['tutorial', 'quiz', 'live',"undefined"]
   },
   title: { type: String, required: true },
   description: String,
@@ -46,7 +46,6 @@ const courseSchema = new Schema({
   instructor: { 
     type: Schema.Types.ObjectId, 
     ref: 'User', 
-    required: true
   },
   thumbnail: { 
     filename: String,
@@ -60,7 +59,7 @@ const courseSchema = new Schema({
   type: { 
     type: String, 
     required: true,
-    enum: ['free', 'premium'],
+    enum: ['free', 'premium',"undefined"],
     default: 'free'
   },
   status: { 
